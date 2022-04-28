@@ -27,16 +27,27 @@ void processInput(GLFWwindow* window);//处理用户输入的函数
 int main()
 {
 	float vertices[] = { //定义三角形顶点坐标
-	-0.5f, -0.5f, 0.0f,
-	 0.5f, -0.5f, 0.0f,
-	 0.0f,  0.5f, 0.0f
+		0.5f,0.5f,0.0f,
+		0.5f,-0.5f,0.0f,
+		-0.5f,-0.5f,0.0f,
+		-0.5f,0.5f,0.0f
 	};
+
+	unsigned int indices[] = {
+		0,1,3,
+		1,2,3
+	};
+
 //初始化Opengl#############################################################
 	glfwInit(); //初始化opengl
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);//设置主版本
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);//设置次版本
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);//设置opengl为核心模式
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,GL_TRUE);苹果电脑加上这个
+#ifdef __APPLE__
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);//苹果电脑加上这个
+#endif  __APPLE__
+
+	
 
 //绘制窗口并设定在当前窗口设定OGL上下文########################################
 	GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);//创建窗口对象
@@ -58,6 +69,7 @@ int main()
 //初始化着色器设置###########################################################
 	unsigned int VBO; //定义保存顶点缓冲对象的ID的变量
 	unsigned int VAO; //定义保存顶点数组对象的变量
+	unsigned int EBO; //定义索引缓冲数组
 	unsigned int vertexShader;//定义顶点着色器ID
 	unsigned int fragmentShader;//绑定编译片段着色器
 	unsigned int shaderProgram;//创建着色器程序对象
@@ -95,13 +107,19 @@ int main()
 	glDeleteShader(vertexShader);//删除无用的着色器对象
 	glDeleteShader(fragmentShader);
 	//----------------------------------------------------------
+	glGenBuffers(1, &EBO);
 	glGenBuffers(1, &VBO);//生成顶点缓冲对象VBO
 	glGenVertexArrays(1, &VAO);//创建VAO
 	glBindVertexArray(VAO);//绑定VAO
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);//把新建的缓冲绑定到GL_ARRAY_BUFFER目标上
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);//绑定EBO缓存
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);//复制顶点索引数据到缓存中
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);//解释顶点属性
 	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);//unbind
+	glBindVertexArray(0);
+	
 
 //循环####################################################################
 	while (!glfwWindowShouldClose(window))//渲染循环
@@ -114,12 +132,16 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);//清空颜色缓冲
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
 		//检查并调用时间，交换缓冲*******
 		glfwSwapBuffers(window);//交换颜色缓冲(存储窗口中像素颜色值)，用来绘制
 		glfwPollEvents();//检查是否有事件发生
 	}
+	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &EBO);
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteProgram(shaderProgram);
 	glfwTerminate();//结束绘制并释放所有资源
 	return 0;
 }
