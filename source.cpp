@@ -18,24 +18,37 @@ const char* fragmentShaderSource =
 	"	FragColor = vec4(1.0f,0.5f,0.2f,1.0f);\n"
 	"}\n";
 
+const char* fragmentShaderSource2 =
+	"#version 330 core\n"
+	"out vec4 FragColor;\n"
+	"void main()\n"
+	"{\n"
+	"	FragColor = vec4(1.0f,1.0f,0.0f,1.0f);\n"
+	"}\n";
+
 using std::cout;
 using std::endl;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);//用户需要调整窗口大小时的回调函数
 void processInput(GLFWwindow* window);//处理用户输入的函数
 
+
 int main()
 {
 	float vertices[] = { //定义三角形顶点坐标
 		0.5f,0.5f,0.0f,
+		0.0f,0.0f,0.0f,
 		0.5f,-0.5f,0.0f,
-		-0.5f,-0.5f,0.0f,
-		-0.5f,0.5f,0.0f
+	};
+
+	float vertices2[] = {
+		-0.5f,0.5f,0.0f,
+		0.0f,0.0f,0.0f,
+		-0.5f,-0.5f,0.0f
 	};
 
 	unsigned int indices[] = {
-		0,1,3,
-		1,2,3
+		0,1,2
 	};
 
 //初始化Opengl#############################################################
@@ -70,9 +83,14 @@ int main()
 	unsigned int VBO; //定义保存顶点缓冲对象的ID的变量
 	unsigned int VAO; //定义保存顶点数组对象的变量
 	unsigned int EBO; //定义索引缓冲数组
+	unsigned int VBO2;
+	unsigned int VAO2;
+	unsigned int EBO2;
 	unsigned int vertexShader;//定义顶点着色器ID
 	unsigned int fragmentShader;//绑定编译片段着色器
+	unsigned int fragmentShader2;
 	unsigned int shaderProgram;//创建着色器程序对象
+	unsigned int shaderProgram2;
 	int success;//表示过程是否成功
 	char infoLog[512];//若失败了用这个变量存放失败日志
 	//配置顶点着色器和片段着色器---------------------------------------------
@@ -94,6 +112,15 @@ int main()
 		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
 		cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << endl;
 	}
+	fragmentShader2 = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader2, 1, &fragmentShaderSource2, NULL);
+	glCompileShader(fragmentShader2);
+	glGetShaderiv(fragmentShader2, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+		cout << "ERROR::SHADER::FRAGMENT2::COMPILATION_FAILED\n" << infoLog << endl;
+	}
 	shaderProgram = glCreateProgram();//附加并链接着色器对象
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
@@ -104,12 +131,26 @@ int main()
 		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
 		cout << "ERROR::SHADER::LINK_FAILED\n" << infoLog << endl;
 	}
+	shaderProgram2 = glCreateProgram();
+	glAttachShader(shaderProgram2, vertexShader);
+	glAttachShader(shaderProgram2, fragmentShader2);
+	glLinkProgram(shaderProgram2);
+	glGetProgramiv(shaderProgram2, GL_LINK_STATUS, &success);
+	if (!success)
+	{
+		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+		cout << "ERROR::SHADER2::LINK_FAILED\n" << infoLog << endl;
+	}
 	glDeleteShader(vertexShader);//删除无用的着色器对象
 	glDeleteShader(fragmentShader);
+	glDeleteShader(fragmentShader2);
 	//----------------------------------------------------------
 	glGenBuffers(1, &EBO);
 	glGenBuffers(1, &VBO);//生成顶点缓冲对象VBO
 	glGenVertexArrays(1, &VAO);//创建VAO
+	glGenBuffers(1, &EBO2);
+	glGenBuffers(1, &VBO2);
+	glGenVertexArrays(1, &VAO2);
 	glBindVertexArray(VAO);//绑定VAO
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);//把新建的缓冲绑定到GL_ARRAY_BUFFER目标上
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -119,7 +160,15 @@ int main()
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);//unbind
 	glBindVertexArray(0);
-	
+	glBindVertexArray(VAO2);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO2);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(VAO2);
 
 //循环####################################################################
 	while (!glfwWindowShouldClose(window))//渲染循环
@@ -132,8 +181,11 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);//清空颜色缓冲
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
+		glUseProgram(shaderProgram2);
+		glBindVertexArray(VAO2);
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 		//检查并调用时间，交换缓冲*******
 		glfwSwapBuffers(window);//交换颜色缓冲(存储窗口中像素颜色值)，用来绘制
 		glfwPollEvents();//检查是否有事件发生
